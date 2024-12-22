@@ -4,8 +4,6 @@ import { ShoppingCart, LogOut, UserCircle, Users, ShoppingBag, Book, User, Credi
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from "../contexts/AuthContext";
 
-
-
 export default function Header() {
 
     const { logout, account, id } = useAuth();
@@ -73,8 +71,6 @@ export default function Header() {
                 );
         }
     };
-
-
     return (
         <header className="bg-indigo-700 text-white p-6 shadow-md">
             <div className="container mx-auto flex justify-between items-center">
