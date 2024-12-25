@@ -1,115 +1,283 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  ShoppingCart, 
-  Trash2, 
-  Plus, 
-  Minus, 
-  DollarSign, 
-  CheckCircle 
+import React, { useState } from 'react';
+import {
+  CreditCard,
+  MapPin,
+  User,
+  Mail,
+  Phone,
+  CheckCircle2,
+  DollarSign
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/useCartContext';
+import { useOrder } from "../contexts/useOrderContext";
+import { useAuth } from "../contexts/AuthContext"; // Import useAuth
+import { useNavigate } from 'react-router-dom';
+
 import Header from '../components/Header';
 
-const CartPage = () => {
-    const navigate = useNavigate()
-    const { cartItems, removeFromCart, updateQuantity } = useCart();
-    
-    console.log("Cart contents:", cartItems);
+
+const CheckoutPage = () => {
+
+  const { cartItems, removeFromCart } = useCart();// Access cart items
+  const { addOrder } = useOrder(); // Access order context
+  const navigate = useNavigate();
+  const { id: userId } = useAuth(); // Get userId from AuthContext
+  console.log("Use Auth ID: ",userId);
 
 
+  // Form state
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    postalCode: '',
+    paymentMethod: 'cash'
+  });
 
-  const [promoCode, setPromoCode] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const [promoMessage, setPromoMessage] = useState('');
-  const [cartTotal, setCartTotal]=useState(0);
 
-  // Calculate totals
+  // Order summary calculation
   const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-  const shippingCost = subtotal > 5000 ? 0 : 250; // Free shipping over 5000 PKR
-  const total = subtotal + shippingCost - discount;
+  const shippingCost = subtotal > 5000 ? 0 : 250;
+  const total = subtotal + shippingCost; // Use cartTotal if provided
 
+  // Form validation state
+  const [errors, setErrors] = useState({});
 
-  // Function to apply the promo code
-  const applyPromoCode = () => {
-    const validPromoCode = 'UMEED10'; // Example promo code
-    if (promoCode === validPromoCode) {
-      const promoDiscount = subtotal * 0.1; // 10% discount
-      setDiscount(promoDiscount);
-      setCartTotal(total - discount);
-      setPromoMessage(`Promo code applied! You saved ${promoDiscount} PKR.`);
-    } else {
-      setDiscount(0);
-      setPromoMessage('Invalid promo code. Please try again.');
-    }
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prevState => ({
+      ...prevState,
+      [name]: value
+    }));
   };
+
+  // Validate form
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
+    if (!formData.email.trim()) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Email is invalid";
+
+    if (!formData.phone.trim()) newErrors.phone = "Phone number is required";
+    if (!formData.address.trim()) newErrors.address = "Address is required";
+    if (!formData.city.trim()) newErrors.city = "City is required";
+    if (!formData.postalCode.trim()) newErrors.postalCode = "Postal code is required";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle form submission
+  const handleConfirmOrder = async (e) => {
+
+    e.preventDefault();
+
+    if (cartItems.length === 0) {
+      alert("Your cart is empty!");
+      return;
+    }
+
+    if (validateForm()) {
+
+
+      
+      const newOrder = {
+        userId,
+        items: cartItems.map(item => ({
+          id: item._id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        date: new Date().toLocaleString(),
+        total: cartItems.reduce((sum, item) => sum + item.price * item.quantity, 250), // Adjust if needed
+      };
+
+      console.log("NewOrder: ", newOrder);
+  
+      try {
+        // Send the new order to the server
+        const response = await fetch('http://localhost:8080/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newOrder),
+        });
+  
+        if (!response.ok) {
+          throw new Error("Failed to confirm the order");
+        }
+  
+        // Clear the cart after successful submission
+        cartItems.forEach((item) => removeFromCart(item.id));
+  
+        console.log("Order confirmed and saved to DB:", newOrder);
+        alert("Order confirmed successfully!");
+        navigate('/orders');
+      } catch (error) {
+        console.error("Error confirming order:", error);
+        alert("There was an error confirming your order. Please try again.");
+      }
+    }
+
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50 font-noto-nastaliq">
-      <Header/>
+
+      <Header />
 
       <div className="container mx-auto py-12 px-4">
         <div className="grid md:grid-cols-3 gap-6">
-          {/* Cart Items Column */}
-          <div className="md:col-span-2 space-y-4">
-            <h2 className="text-2xl font-bold mb-4">Cart Items</h2>
-            
-            {cartItems.length === 0 ? (
-              <div className="text-center text-gray-600 py-8">
-                Your cart is empty
-              </div>
-            ) : (
-              cartItems.map(item => (
-                <div 
-                  key={item.id} 
-                  className="bg-white rounded-xl shadow-md p-4 flex items-center"
-                >
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-24 h-24 object-cover rounded-md mr-4"
+          {/* Checkout Form */}
+          <div className="md:col-span-2 bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-2xl font-bold mb-6">Shipping Information</h2>
+            <form onSubmit={handleConfirmOrder} className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Full Name */}
+                <div>
+                  <label className=" mb-2 flex items-center">
+                    <User size={16} className="mr-2 text-indigo-600" />
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    className={`w-full p-2 border rounded ${errors.fullName ? 'border-red-500' : ''}`}
+                    placeholder="Enter your full name"
                   />
-                  <div className="flex-grow">
-                    <h3 className="font-bold text-lg text-indigo-700">{item.name}</h3>
-                    <p className="text-gray-600 text-sm">{item.description}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center space-x-2">
-                        <DollarSign size={16} className="text-green-600" />
-                        <span>{item.price} PKR</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button 
-                          onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                          className="bg-gray-200 p-1 rounded"
-                        >
-                          <Minus size={16} />
-                        </button>
-                        <span>{item.quantity}</span>
-                        <button 
-                          onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                          className="bg-gray-200 p-1 rounded"
-                        >
-                          <Plus size={16} />
-                        </button>
-                        <button 
-                          onClick={() => removeFromCart(item._id)}
-                          className="text-red-500 ml-2"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  {errors.fullName && (
+                    <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>
+                  )}
                 </div>
-              ))
-            )}
+
+                {/* Email */}
+                <div>
+                  <label className=" mb-2 flex items-center">
+                    <Mail size={16} className="mr-2 text-indigo-600" />
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className={`w-full p-2 border rounded ${errors.email ? 'border-red-500' : ''}`}
+                    placeholder="Enter your email"
+                  />
+                  {errors.email && (
+                    <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className=" mb-2 flex items-center">
+                  <Phone size={16} className="mr-2 text-indigo-600" />
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className={`w-full p-2 border rounded ${errors.phone ? 'border-red-500' : ''}`}
+                  placeholder="Enter your phone number"
+                />
+                {errors.phone && (
+                  <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+                )}
+              </div>
+
+              {/* Address */}
+              <div>
+                <label className=" mb-2 flex items-center">
+                  <MapPin size={16} className="mr-2 text-indigo-600" />
+                  Shipping Address
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  className={`w-full p-2 border rounded ${errors.address ? 'border-red-500' : ''}`}
+                  placeholder="Enter your full address"
+                />
+                {errors.address && (
+                  <p className="text-red-500 text-sm mt-1">{errors.address}</p>
+                )}
+              </div>
+
+              {/* City and Postal Code */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-2">City</label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    className={`w-full p-2 border rounded ${errors.city ? 'border-red-500' : ''}`}
+                    placeholder="Enter your city"
+                  />
+                  {errors.city && (
+                    <p className="text-red-500 text-sm mt-1">{errors.city}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block mb-2">Postal Code</label>
+                  <input
+                    type="text"
+                    name="postalCode"
+                    value={formData.postalCode}
+                    onChange={handleInputChange}
+                    className={`w-full p-2 border rounded ${errors.postalCode ? 'border-red-500' : ''}`}
+                    placeholder="Enter postal code"
+                  />
+                  {errors.postalCode && (
+                    <p className="text-red-500 text-sm mt-1">{errors.postalCode}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div>
+                <label className="block mb-2">Payment Method</label>
+                <select
+                  name="paymentMethod"
+                  value={formData.paymentMethod}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="cash">Cash on Delivery</option>
+                  <option value="card">Credit/Debit Card</option>
+                  <option value="bank">Bank Transfer</option>
+                </select>
+              </div>
+            </form>
           </div>
 
-          {/* Order Summary Column */}
+          {/* Order Summary */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-2xl font-bold mb-4">Order Summary</h2>
-            
-            <div className="space-y-4">
+
+            {cartItems.map(item => (
+              <div key={item.id} className="flex justify-between mb-2">
+                <span>{item.name} x {item.quantity}</span>
+                <span>{item.price * item.quantity} PKR</span>
+              </div>
+            ))}
+
+            <hr className="my-4" />
+
+            <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>{subtotal} PKR</span>
@@ -118,56 +286,19 @@ const CartPage = () => {
                 <span>Shipping</span>
                 <span>{shippingCost === 0 ? 'Free' : `${shippingCost} PKR`}</span>
               </div>
-              {discount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>Discount</span>
-                  <span>-{discount} PKR</span>
-                </div>
-              )}
-              <hr className="my-2" />
-              <div className="flex justify-between font-bold">
+              <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
                 <span>{total} PKR</span>
               </div>
-
-              {/* Promo Code Section */}
-              <div className="mt-4">
-                <label className="block mb-2">Promo Code</label>
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    placeholder="Enter promo code"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    className="flex-grow p-2 border rounded"
-                  />
-                  <button 
-                    onClick={applyPromoCode}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
-                  >
-                    Apply
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Hint: Try 'UMEED10' for 10% off
-                </p>
-                {promoMessage && (
-                  <p className={`mt-2 text-xs ${discount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {promoMessage}
-                  </p>
-                )}
-              </div>
-
-              {/* Checkout Button */}
-              <button 
-                className="w-full bg-green-500 text-white p-3 rounded-full flex items-center justify-center hover:bg-green-600 transition mt-4"
-                disabled={cartItems.length === 0}
-                onClick={()=>navigate("/checkout")}
-              >
-                <CheckCircle className="mr-2" />
-                Proceed to Checkout
-              </button>
             </div>
+
+            <button
+              onClick={handleConfirmOrder}
+              className="w-full bg-green-500 text-white p-3 rounded-full flex items-center justify-center hover:bg-green-600 transition mt-6"
+            >
+              <CheckCircle2 className="mr-2" />
+              Confirm Order
+            </button>
           </div>
         </div>
       </div>
@@ -175,4 +306,4 @@ const CartPage = () => {
   );
 };
 
-export default CartPage;
+export default CheckoutPage;
