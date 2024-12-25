@@ -12,6 +12,9 @@ const courseRoutes = require('./routes/course');
 const setupRoutes = require('./routes/setup');
 const cors = require('cors');
 
+const express = require('express'); // Import express
+const path = require('path'); // Import path for static file serving
+
 
 const PORT = process.env.PORT || 8080;
 
@@ -106,6 +109,7 @@ async function bootstrap() {
   app.use('/order',orderRoutes);
   app.use('/sell/course', courseRoutes);
   app.use('/setup/', setupRoutes);
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
   // Start server
   server.listen(PORT, () => {

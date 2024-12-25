@@ -4,22 +4,19 @@ import {
   Filter,
   ShoppingCart,
   Star,
-  DollarSign,
-  ChevronDown, Users
+  DollarSign
 } from 'lucide-react';
 
 import { useCart } from '../contexts/useCartContext';
 
-import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 const ProductsPage = () => {
-  const navigate = useNavigate();
   const { addToCart } = useCart();
 
 
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
-  const [subcategory, setSubcategory] = useState('all');
+  const [subcategory] = useState('all');
   const [priceRange, setPriceRange] = useState([0, 1000000]);
   const [sortBy, setSortBy] = useState('rating');
   const [products, setProducts] = useState([]);
@@ -42,7 +39,7 @@ const ProductsPage = () => {
         console.log("Fetched Products Data: ", data);
         const fetchedProducts = data.products.map(product => ({
           ...product,
-          image: product.image ? product.image : placeholderImage, // Use dummy image if image is null
+          image: product.image ? `http://localhost:8080${product.image}` : placeholderImage, // Use dummy image if image is null
         }));
         setAllProducts(fetchedProducts);
         setProducts(fetchedProducts);
@@ -94,7 +91,7 @@ const ProductsPage = () => {
         className="w-32 h-32 object-cover rounded-md mr-4"
       />
       <div className="flex-grow">
-        <h3 className="font-bold text-lg text-indigo-700">{product.name}</h3>
+        <h3 className="font-bold text-lg text-[#4A2511]">{product.name}</h3>
         <p className="text-gray-600 text-sm mb-2">{product.description}</p>
         <div className="flex items-center space-x-2 mb-2">
           <DollarSign size={16} className="text-green-600" />
@@ -107,7 +104,7 @@ const ProductsPage = () => {
             {product.category}
           </span>
         </div>
-        <button className="mt-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition flex items-center" onClick={() => {
+        <button className="mt-2 bg-[#8B4513] text-[#F5DEB3] px-4 py-2 rounded hover:bg-[#6B3410] transition-colors flex items-center" onClick={() => {
           console.log('Adding to cart:', product);
           addToCart(product);
         }}>
@@ -117,7 +114,6 @@ const ProductsPage = () => {
       </div>
     </div>
   );
-
   return (
     <div className="min-h-screen bg-gray-50 font-noto-nastaliq relative">
       {/* <header className="bg-indigo-700 text-white p-6 shadow-md">

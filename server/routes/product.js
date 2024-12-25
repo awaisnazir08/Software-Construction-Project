@@ -2,18 +2,31 @@ const express = require('express');
 const multer = require("multer");
 const Product = require('../models/Product');
 const router = express.Router();
+const path = require("path");
 
-const upload = multer(); // Multer middleware to handle FormData
+// const upload = multer(); // Multer middleware to handle FormData
+
+// Set up multer storage engine
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, './uploads'); // Store files in the 'uploads' folder
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); // Unique file name
+  }
+});
+
+const upload = multer({ storage });
 
 
 // Create a new product (POST)
-router.post("/", upload.none(), async (req, res) => {
+router.post("/", upload.single('image'), async (req, res) => {
   console.log("This API got hit Products wali");
 
   try {
     console.log("Request Body: ", req.body);
     const { name, description, price, category } = req.body;
-    const image = req.body.image === '' ? null : req.body.image;
+    const image = req.file ? `/uploads/${req.file.filename}` : null; 
 
     console.log("Received Product Data:", req.body);
 

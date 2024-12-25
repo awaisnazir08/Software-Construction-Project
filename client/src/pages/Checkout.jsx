@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import {
-  CreditCard,
   MapPin,
   User,
   Mail,
   Phone,
-  CheckCircle2,
-  DollarSign
+  CheckCircle2
 } from 'lucide-react';
 import { useCart } from '../contexts/useCartContext';
 import { useOrder } from "../contexts/useOrderContext";
@@ -92,6 +90,7 @@ const CheckoutPage = () => {
           name: item.name,
           price: item.price,
           quantity: item.quantity,
+          image: item.image
         })),
         date: new Date().toLocaleString(),
         total: cartItems.reduce((sum, item) => sum + item.price * item.quantity, 250), // Adjust if needed
@@ -124,6 +123,7 @@ const CheckoutPage = () => {
     }
 
   };
+
 
 
   return (
