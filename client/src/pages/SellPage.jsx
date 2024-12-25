@@ -1,342 +1,137 @@
-import React, { useState } from 'react';
-import { Users, ShoppingBag, BookOpen, ImagePlus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 
-const SellPage = () => {
-  const [selectedType, setSelectedType] = useState(null);
-  const [productDetails, setProductDetails] = useState({
-    name: '',
-    description: '',
-    price: '',
-    category: '',
-    image: null
-  });
-  const [courseDetails, setCourseDetails] = useState({
-    title: '',
-    description: '',
-    price: '',
-    duration: '',
-    skillLevel: ''
-  });
+import { DollarSign, ShoppingCart, Calendar } from 'lucide-react';
+import { useAuth } from "../contexts/AuthContext"; // Import useAuth
 
-  const handleTypeSelection = (type) => {
-    setSelectedType(type);
-  };
+const Order = () => {
+  const [orders, setOrders] = useState([]);
+  const { id: userId } = useAuth(); // Get userId from AuthContext
 
-  const handleProductChange = (e) => {
-    const { name, value, files } = e.target;
-    setProductDetails(prev => ({
-      ...prev,
-      [name]: files ? files[0] : value
-    }));
-  };
+  const placeholderImage = 'https://s3-alpha-sig.figma.com/img/a25d/266a/dc3c77058f886344ea0e6d70f086a23e?Expires=1734912000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=AnmkLf5rwu4a-PaaQD0dni3iadBWjtzspkWzaNdzbDCJtB-dKcUmMRo53BXKa0d81jJK5h5EwIlxaIB-7EVkuUrwyhuQ0mdjiiAoAaD~jPh6A44NDyJNFDSf0rjOcLTLH1Uke2K7zyep2FhduKmeuLdtkGbZknSDTSZ1FjhJq-yrdkE2AwR~WmhvmGsUypn-Botj7dw0z5UYRU386NPdONesgLgg6QQrvNVtW6qJbUlxNNFVQrHy6Gy1F-FFE5iTBgHKKrBC9h35a4kE9M5s50yr9ShCUrGDaTCEE2~-HalSQhkTJvpnUh3E6~K1oWT3xDK2uTh-HrWI1-W-R1sgxQ__'; // Dummy image URL
 
-  const handleCourseChange = (e) => {
-    const { name, value } = e.target;
-    setCourseDetails(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    console.log("Selected Type: ", selectedType);
-
-    if (selectedType === 'product') {
+  // Fetch Orders from DB 
+  useEffect(() => {
+    const fetchOrders = async () => {
       try {
-        // Create a FormData object to handle text and image data
-        const formData = new FormData();
-        formData.append('name', productDetails.name);
-        formData.append('description', productDetails.description);
-        formData.append('price', productDetails.price);
-        formData.append('category', productDetails.category);
-        if (productDetails.image) {
-          formData.append('image', productDetails.image);
-        } else {
-          formData.append('image', '');
+        if (!userId) {
+          console.error('User ID is not available');
+          return;
         }
 
-        console.log("Form Data:", Object.fromEntries(formData.entries()));
-        console.log("Form Data Again: ", formData);
-
-
-
-        // Send POST request to backend
-        const response = await fetch('http://localhost:8080/sell/product', {
-          method: 'POST',
-          body: formData,
-        });
-
-        const result = await response.json();
-        console.log(result);
-
-        if (response.ok) {
-          alert('Product listed successfully!');
-          setProductDetails({
-            name: '',
-            description: '',
-            price: '',
-            category: '',
-            image: null,
-          });
-          setSelectedType(null); // Reset form
-        } else {
-          alert(`Error: ${result.message}`);
+        const response = await fetch(`http://localhost:8080/order?userId=${userId}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch orders");
         }
+        const data = await response.json();
+        // Process orders to include placeholder images if missing
+        const processedOrders = Array.isArray(data) // Ensure we have an array of orders
+        ? data.map(order => ({
+            ...order,
+            items: order.items.map(item => ({
+              ...item,
+              image: item.image ? item.image : placeholderImage, // Assign dummy image if image is null or undefined
+            })),
+          }))
+        : [];
+
+      setOrders(processedOrders); // Update state with processed orders
+
       } catch (error) {
-        console.error('Error submitting product:', error);
-        alert('Failed to list the product. Please try again.');
+        console.error("Error fetching orders:", error);
+        alert("Failed to load orders. Please try again.");
       }
-    } else if (selectedType === 'course') {
-      try {
-        const formData = new FormData();
-        formData.append('title', courseDetails.title);
-        formData.append('description', courseDetails.description);
-        formData.append('price', courseDetails.price);
-        formData.append('duration', courseDetails.duration);
-        formData.append('skillLevel', courseDetails.skillLevel);
+    };
 
-
-        console.log("Form Data:", Object.fromEntries(formData.entries()));
-        console.log("Form Data Again: ", formData);
-
-
-
-        // Send POST request to backend
-        const response = await fetch('http://localhost:8080/sell/course', {
-          method: 'POST',
-          body: formData,
-        });
-
-        const result = await response.json();
-        console.log(result);
-
-        if (response.ok) {
-          alert('Course listed successfully!');
-          setCourseDetails({
-            title: '',
-            description: '',
-            price: '',
-            duration: '',
-            skillLevel: '',
-          });
-          setSelectedType(null); // Reset form
-        } else {
-          alert(`Error: ${result.message}`);
-        }
-      } catch (error) {
-        console.error('Error submitting Course:', error);
-        alert('Failed to list the course. Please try again.');
-      }
-    }
-  };
-
-
-
-
-
+    fetchOrders();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 font-noto-nastaliq relative">
-      <Header/>
-      <div className="container mx-auto py-12 px-4">
-        <h1 className="text-3xl font-bold text-indigo-700 mb-8">What Would You Like to Sell?</h1>
+    <div className="min-h-screen bg-gray-50 font-noto-nastaliq">
+      <Header />
 
-        {!selectedType && (
-          <div className="grid md:grid-cols-2 gap-6">
-            <button
-              onClick={() => handleTypeSelection('product')}
-              className="bg-white border-2 border-indigo-200 p-6 rounded-xl hover:shadow-lg transition flex items-center space-x-4"
-            >
-              <ShoppingBag size={40} className="text-indigo-600" />
-              <div>
-                <h2 className="text-xl font-semibold">Handmade Products</h2>
-                <p className="text-gray-600">Sell your crafts, artworks, and traditional items</p>
-              </div>
-            </button>
+      {/* Title */}
+      <div className="container mx-auto py-8 px-4 text-center">
+        <h2 className="text-3xl font-bold  mb-6">
+         Your Orders
+        </h2>
+      </div>
 
-            <button
-              onClick={() => handleTypeSelection('course')}
-              className="bg-white border-2 border-indigo-200 p-6 rounded-xl hover:shadow-lg transition flex items-center space-x-4"
-            >
-              <BookOpen size={40} className="text-indigo-600" />
-              <div>
-                <h2 className="text-xl font-semibold">Skill Development Courses</h2>
-                <p className="text-gray-600">Share your expertise and teach skills</p>
-              </div>
-            </button>
+      {/* Orders Section */}
+      <div className="container mx-auto px-4 pb-12">
+        {orders.length === 0 ? (
+          <div className="text-center text-gray-600 py-8">
+            <p>No orders have been placed yet.</p>
           </div>
-        )}
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {orders.map((order, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-xl shadow-md p-6"
+              >
+                {/* Order Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-indigo-700">
+                    Order #{order.id || index + 1}
+                  </h2>
+                  <ShoppingCart size={20} className="text-indigo-700" />
+                </div>
 
-        {selectedType === 'product' && (
-          <form onSubmit={handleSubmit} method='POST' className="bg-white p-8 rounded-xl shadow-md">
-            <h2 className="text-2xl font-bold mb-6 text-indigo-700">List Your Handmade Product</h2>
+                {/* Date & Time of the Order */}
+                <div className="flex items-center text-sm text-gray-500 mb-4">
+                  <Calendar size={16} className="mr-1" />
+                  <span>
+                    Ordered on: {new Date(order.date).toLocaleDateString()} at{' '}
+                    {new Date(order.date).toLocaleTimeString()}
+                  </span>
+                </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block mb-2">Product Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={productDetails.name}
-                  onChange={handleProductChange}
-                  className="w-full p-2 border rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-2">Price (PKR)</label>
-                <input
-                  type="number"
-                  name="price"
-                  value={productDetails.price}
-                  onChange={handleProductChange}
-                  className="w-full p-2 border rounded"
-                  required
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block mb-2">Description</label>
-                <textarea
-                  name="description"
-                  value={productDetails.description}
-                  onChange={handleProductChange}
-                  className="w-full p-2 border rounded"
-                  rows="4"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-2">Category</label>
-                <select
-                  name="category"
-                  value={productDetails.category}
-                  onChange={handleProductChange}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="">Select Category</option>
-                  <option value="textiles">Textiles</option>
-                  <option value="pottery">Pottery</option>
-                  <option value="jewelry">Jewelry</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="block mb-2">Product Image</label>
-                <div className="flex items-center space-x-4">
-                  <input
-                    type="file"
-                    name="image"
-                    onChange={handleProductChange}
-                    className="hidden"
-                    id="product-image"
-                    accept="image/*"
-                  />
-                  <label
-                    htmlFor="product-image"
-                    className="flex items-center space-x-2 bg-indigo-100 text-indigo-700 px-4 py-2 rounded cursor-pointer"
-                  >
-                    <ImagePlus size={20} />
-                    <span>Upload Image</span>
-                  </label>
-                  {productDetails.image && (
-                    <span>{productDetails.image.name}</span>
-                  )}
+                {/* Items in the Order */}
+                <div className="space-y-3">
+                  {order.items.map((item, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-12 h-12 rounded-md object-cover"
+                        />
+                        <div>
+                          <p className="font-bold text-sm">{item.name}</p>
+                          <p className="text-gray-600 text-xs">
+                            Qty: {item.quantity}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1 text-grey-600">
+                        <DollarSign size={14} />
+                        <span className="text-sm">
+                          {item.price * item.quantity} PKR
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Order Total */}
+                <div className="border-t mt-4 pt-4 flex justify-between font-bold">
+                  <span>Total</span>
+                  <div className="flex items-center space-x-1 text-grey-600">
+                    <DollarSign size={18} />
+                    <span>{order.total} PKR</span>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <button
-              type="submit"
-              className="mt-6 w-full bg-indigo-600 text-white py-3 rounded hover:bg-indigo-700 transition"
-            >
-              List Product
-            </button>
-          </form>
-        )}
-
-        {selectedType === 'course' && (
-          <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-md">
-            <h2 className="text-2xl font-bold mb-6 text-indigo-700">Create Your Skill Course</h2>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block mb-2">Course Title</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={courseDetails.title}
-                  onChange={handleCourseChange}
-                  className="w-full p-2 border rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-2">Price (PKR)</label>
-                <input
-                  type="number"
-                  name="price"
-                  value={courseDetails.price}
-                  onChange={handleCourseChange}
-                  className="w-full p-2 border rounded"
-                  required
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block mb-2">Course Description</label>
-                <textarea
-                  name="description"
-                  value={courseDetails.description}
-                  onChange={handleCourseChange}
-                  className="w-full p-2 border rounded"
-                  rows="4"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-2">Course Duration</label>
-                <select
-                  name="duration"
-                  value={courseDetails.duration}
-                  onChange={handleCourseChange}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="">Select Duration</option>
-                  <option value="1week">1 Week</option>
-                  <option value="2weeks">2 Weeks</option>
-                  <option value="1month">1 Month</option>
-                  <option value="2months">2 Months</option>
-                </select>
-              </div>
-              <div>
-                <label className="block mb-2">Skill Level</label>
-                <select
-                  name="skillLevel"
-                  value={courseDetails.skillLevel}
-                  onChange={handleCourseChange}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="">Select Level</option>
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="mt-6 w-full bg-indigo-600 text-white py-3 rounded hover:bg-indigo-700 transition"
-            >
-              Create Course
-            </button>
-          </form>
+            ))}
+          </div>
         )}
       </div>
     </div>
   );
 };
 
-export default SellPage;
+export default Order;
