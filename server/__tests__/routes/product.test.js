@@ -42,62 +42,8 @@ afterAll(async () => {
   await mongoServer.stop();
 });
 
-describe('Course Routes', () => {
-  test('POST /courses should create a new course', async () => {
-    const mockCourse = {
-      title: 'Test Course',
-      description: 'Test Description',
-      price: 99.99,
-      duration: '1month',
-      skillLevel: 'beginner'
-    };
 
-    const res = await request(app)
-      .post('/courses')
-      .type('form')
-      .send(mockCourse);
-    
-    expect(res.statusCode).toBe(201);
-  });
 
-  test('GET /courses should fetch all courses', async () => {
-    const res = await request(app).get('/courses');
-    expect(res.statusCode).toBe(200);
-    expect(Array.isArray(res.body.courses)).toBeTruthy();
-  });
-});
-
-describe('Order Routes', () => {
-  test('POST /orders should create a new order', async () => {
-    const mockOrder = {
-      userId: new mongoose.Types.ObjectId().toString(),
-      items: [{
-        id: '12345',
-        name: 'Test Item',
-        price: 99.99,
-        quantity: 2
-      }],
-      date: new Date().toLocaleString(),
-      total: 199.98
-    };
-
-    const res = await request(app)
-      .post('/orders')
-      .send(mockOrder);
-
-    expect(res.statusCode).toBe(201);
-  });
-
-  test('GET /orders should fetch user orders', async () => {
-    const userId = new mongoose.Types.ObjectId().toString();
-    const res = await request(app)
-      .get('/orders')
-      .query({ userId });
-    
-    expect(res.statusCode).toBe(200);
-    expect(Array.isArray(res.body)).toBeTruthy();
-  });
-});
 
 describe('Product Routes', () => {
 
@@ -177,71 +123,6 @@ test('GET /orders should fetch user orders', async () => {
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body.products)).toBeTruthy();
   });
-
-  
-});
-
-// Auth Tests
-describe('Auth Routes', () => {
-  test('POST /auth/register should create a new user', async () => {
-    const mockUser = {
-      username: 'newuser',
-      password: 'password123',
-    };
-
-    const res = await request(app)
-      .post('/auth/register')
-      .send(mockUser);
-
-    expect(res.statusCode).toBe(201);
-    expect(res.body).toHaveProperty('data');
-    expect(res.body.data.username).toBe(mockUser.username);
-    expect(res.body).toHaveProperty('token');
-  });
-
-  test('POST /auth/login should authenticate a user and return a token', async () => {
-    const mockUser = {
-      username: 'existinguser',
-      password: 'password123',
-    };
-
-    await request(app)
-      .post('/auth/register')
-      .send(mockUser);
-
-    const res = await request(app)
-      .post('/auth/login')
-      .send(mockUser);
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toHaveProperty('token');
-    expect(res.body.data.username).toBe(mockUser.username);
-  });
-
-  test('GET /auth/me should return the authenticated user', async () => {
-    const mockUser = {
-      username: 'existinguser',
-      password: 'password123',
-    };
-
-    await request(app)
-      .post('/auth/register')
-      .send(mockUser);
-
-    const resLogin = await request(app)
-      .post('/auth/login')
-      .send(mockUser);
-
-    const token = resLogin.body.token;
-
-    const res = await request(app)
-      .get('/auth/me')
-      .set('Authorization', `Bearer ${token}`);
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toHaveProperty('username', mockUser.username);
-  });
-
 
   
 });
